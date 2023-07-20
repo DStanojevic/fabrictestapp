@@ -61,7 +61,16 @@
   <br/>
   <span>{{textInput}}</span>
   <br/>
-  <button (click)="polygonMode()">Draw Polygon</button>
+  <div>
+    <button (click)="polygonMode()">Drawing mode</button>
+  </div>
+  <div>
+    <button (click)="toggleCapturingArea()">{{capturingAreaText}}</button>
+  </div>
+  <span>{{capturedAreaCoordiantesText}}</span>
+  
+  <br/>
+  <!-- <button (click)="drawPolygon()">Draw</button> -->
   <br/>
   <canvas id="drawingCancvas"></canvas>
 </div>
