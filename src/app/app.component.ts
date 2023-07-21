@@ -5,7 +5,14 @@ import { BehaviorSubject, filter, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environment';
 import { SimpleSquare, SimplePoint } from './classes/Geometries';
 import { AnnotationsService } from './services/annotations.service';
+import { PolygonDrawer } from './classes/PolygonDrawer';
 
+enum WorkingMode {
+  None = 1,
+  Brush,
+  Polygon,
+  Sam
+}
 
 
 @Component({
@@ -17,8 +24,9 @@ export class AppComponent implements AfterViewInit{
 
   constructor(private annotationsService: AnnotationsService) { }
 
+  workingModeEnum = WorkingMode;
+
   title = 'fabrictestapp';
-  textInput: string = 'pera';
   canvas!: fabric.Canvas;
   polygonModeActive: boolean = false;
   
@@ -27,9 +35,10 @@ export class AppComponent implements AfterViewInit{
   imageId: string = 'img1';
   capturingAreaText: string = 'Active';
   capturedAreaCoordiantesText: string = "";
+  $workingMode: BehaviorSubject<WorkingMode> = new BehaviorSubject<WorkingMode>(WorkingMode.None);
+  polygonDrawer!: PolygonDrawer
 
-  private capturingAreaActive: boolean = true;
-  private polygonPoints: fabric.Point[] = [];
+
   private $square: BehaviorSubject<SimpleSquare> = new BehaviorSubject({
     topLeft: { x: 0, y: 0 },
     bottomRight: { x: 0, y: 0 }
@@ -39,17 +48,17 @@ export class AppComponent implements AfterViewInit{
   
   ngOnInit() {
     this.square$.pipe(
+      filter((s: SimpleSquare) => this.$workingMode.getValue() === WorkingMode.Sam && s.topLeft.x != s.bottomRight.x && s.topLeft.y != s.bottomRight.y),
       tap((s: SimpleSquare) => {
-        if(this.capturingAreaActive){
+        if(this.$workingMode.getValue() === WorkingMode.Sam){
           this.capturedAreaCoordiantesText = 
             `Area: (${s.topLeft.x}, ${s.topLeft.y}),(${s.bottomRight.x}, ${s.bottomRight.y})`;
           }
       }),
-      filter((s: SimpleSquare) => s.topLeft.x != s.bottomRight.x && s.topLeft.y != s.bottomRight.y),
       switchMap((s: SimpleSquare) => this.annotationsService.createAnnotations(this.imageId, s))
     ).subscribe(areas => {
-      areas.forEach(e => {
-        const polygon = new fabric.Polygon(e, {
+      areas.forEach(points => {
+        const polygon = new fabric.Polygon(points, {
           fill: 'rgba(255, 0, 0, 0.2)',
           stroke: '#000000',
           strokeWidth: 1
@@ -58,34 +67,57 @@ export class AppComponent implements AfterViewInit{
         this.canvas.renderAll();
       })
     })
+
+    this.$workingMode.subscribe(wm => {
+      if(this.polygonDrawer){
+        if(wm == WorkingMode.Polygon){
+          this.polygonDrawer.Activate();
+        } else{
+          this.polygonDrawer.Deactivate();
+        }
+      }
+    })
   }
+  
   ngAfterViewInit() {
     this.canvas = new fabric.Canvas('drawingCancvas');
+    this.polygonDrawer = new PolygonDrawer(this.canvas);
     
     fabric.Image.fromURL(`${environment.annotationsApiBaseUrl}/images/${this.imageId}`, (img) => {
       this.canvas.setDimensions({width: img.width as number, height: img.height as number});
       this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
-
-      this.canvas.isDrawingMode = false;
-      //const points = [{"x":60,"y":20},{"x":100,"y":40},{"x":100,"y":80}];
-      // const initialPath = 'M 60 20 L 100 40 L 100 80 z';
-
-      // const opts = {
-      //   fill: 'transparent',
-      //   stroke: '#000000',
-      //   strokeWidth: 1,
-      // };
-      
-      // this.currentPath = new fabric.Path(initialPath, opts);
-      // this.canvas.add(this.currentPath);
 
       this.canvas.on('mouse:down', this.onMouseDown.bind(this));
       this.canvas.on("mouse:up", this.onMuseUp.bind(this));
     });  
   }
 
+  setWorkingMode(newMode: WorkingMode){
+    this.$workingMode.next(newMode);
+  }
+
+  completePolygon(){
+    this.polygonDrawer.FinalizeDrawing();
+  }
+
   private onMouseDown(e: fabric.IEvent<MouseEvent>){
-    if(this.capturingAreaActive && e.pointer){
+    switch(this.$workingMode.getValue()){
+      case WorkingMode.Sam:
+        this.onMouseDownSam(e);
+        break;
+    }
+  }
+
+  private onMuseUp(e: fabric.IEvent<MouseEvent>){
+    switch(this.$workingMode.getValue()){
+      case WorkingMode.Sam:
+        this.onMouseUpSam(e);
+        break;
+    }
+  }
+
+  private onMouseDownSam(e: fabric.IEvent<MouseEvent>){
+    if(e.pointer){
       this.capturingAreaStartPoint = {
         x: e.pointer.x,
         y: e.pointer.y
@@ -96,36 +128,16 @@ export class AppComponent implements AfterViewInit{
     }
   }
 
-  private onMuseUp(e: fabric.IEvent<MouseEvent>){
-    if(this.capturingAreaActive && e.pointer && this.capturingAreaStartPoint){
+  private onMouseUpSam(e: fabric.IEvent<MouseEvent>){
+    if(e.pointer && this.capturingAreaStartPoint){
       const endingPoint: SimplePoint = {
         x: e.pointer.x,
         y: e.pointer.y
       };
 
       this.$square.next(AppComponent.getSqueare(this.capturingAreaStartPoint, endingPoint));
-      
     }
   }
-
-  polygonMode() {
-    //this.polygonModeActive = true;
-    //this.canvas.isDrawingMode = false;
-    //this.currentPolygon?.points?.push(new fabric.Point(60, 100));
-    this.canvas.renderAll();
-  }
-
-
-  toggleCapturingArea() {
-    if(this.capturingAreaActive){
-      this.capturingAreaActive = false
-      this.capturingAreaText = "Inactive"
-    } else {
-      this.capturingAreaActive = true
-      this.capturingAreaText = "Active"
-    }
-  }
-
 
   private static getSqueare(point1: SimplePoint, point2: SimplePoint): SimpleSquare {
     let xTopLeft: number;

@@ -54,23 +54,46 @@
       visibility: hidden;
     }
   }
+
+  .radio {
+    display: inline-block;
+    margin-right: 10px;
+  }
 </style>
 
 <div id="divMainContainer">
-  <input type="text" [(ngModel)]="textInput" />
-  <br/>
-  <span>{{textInput}}</span>
-  <br/>
-  <div>
-    <button (click)="polygonMode()">Drawing mode</button>
-  </div>
-  <div>
-    <button (click)="toggleCapturingArea()">{{capturingAreaText}}</button>
-  </div>
   <span>{{capturedAreaCoordiantesText}}</span>
   
   <br/>
-  <!-- <button (click)="drawPolygon()">Draw</button> -->
+  <div>
+    <div class="radio">
+      <label>
+        <input type="radio" name="workingMode" [value]="workingModeEnum.None" (change)="setWorkingMode(workingModeEnum.None)">
+        None
+      </label>
+    </div>
+    <div class="radio">
+      <label>
+        <input type="radio" name="workingMode" [value]="workingModeEnum.Brush" (change)="setWorkingMode(workingModeEnum.Brush)">
+        Brush
+      </label>
+    </div>
+    <div class="radio">
+      <label>
+        <input type="radio" name="workingMode" [value]="workingModeEnum.Polygon" (change)="setWorkingMode(workingModeEnum.Polygon)">
+        Polygon
+      </label>
+    </div>
+    <div class="radio">
+      <label>
+        <input type="radio" name="workingMode" [value]="workingModeEnum.Sam" (change)="setWorkingMode(workingModeEnum.Sam)">
+        ⚡Zero-Shot(SAM)⚡
+      </label>
+    </div>
+    <div style="margin-left: 4M; display: inline-block">
+      <button *ngIf="($workingMode | async) === workingModeEnum.Polygon" (click)="completePolygon()">END</button>
+    </div>
+  </div>
   <br/>
   <canvas id="drawingCancvas"></canvas>
 </div>
