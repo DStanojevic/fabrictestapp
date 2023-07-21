@@ -1,18 +1,11 @@
 import { publishFacade } from '@angular/compiler';
 import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { fabric } from 'fabric';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, filter, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environment';
+import { SimpleSquare, SimplePoint } from './classes/Geometries';
+import { AnnotationsService } from './services/annotations.service';
 
-type Point = {
-  x: number,
-  y: number
-}
-
-type Square = {
-  topLeft: Point,
-  bottomRight: Point
-}
 
 
 @Component({
@@ -21,6 +14,9 @@ type Square = {
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements AfterViewInit{
+
+  constructor(private annotationsService: AnnotationsService) { }
+
   title = 'fabrictestapp';
   textInput: string = 'pera';
   canvas!: fabric.Canvas;
@@ -34,22 +30,35 @@ export class AppComponent implements AfterViewInit{
 
   private capturingAreaActive: boolean = true;
   private polygonPoints: fabric.Point[] = [];
-  private _square: BehaviorSubject<Square> = new BehaviorSubject({
+  private $square: BehaviorSubject<SimpleSquare> = new BehaviorSubject({
     topLeft: { x: 0, y: 0 },
     bottomRight: { x: 0, y: 0 }
   });
-  private capturingAreaStartPoint: Point | undefined;
-  private square$ = this._square.asObservable();
+  private capturingAreaStartPoint: SimplePoint | undefined;
+  private square$ = this.$square.asObservable();
   
   ngOnInit() {
-    this.square$.subscribe(square => {
-      if(this.capturingAreaActive){
-       this.capturedAreaCoordiantesText = 
-        `Area: (${square.topLeft.x}, ${square.topLeft.y}),(${square.bottomRight.x}, ${square.bottomRight.y})`;
-      }
+    this.square$.pipe(
+      tap((s: SimpleSquare) => {
+        if(this.capturingAreaActive){
+          this.capturedAreaCoordiantesText = 
+            `Area: (${s.topLeft.x}, ${s.topLeft.y}),(${s.bottomRight.x}, ${s.bottomRight.y})`;
+          }
+      }),
+      filter((s: SimpleSquare) => s.topLeft.x != s.bottomRight.x && s.topLeft.y != s.bottomRight.y),
+      switchMap((s: SimpleSquare) => this.annotationsService.createAnnotations(this.imageId, s))
+    ).subscribe(areas => {
+      areas.forEach(e => {
+        const polygon = new fabric.Polygon(e, {
+          fill: 'rgba(255, 0, 0, 0.2)',
+          stroke: '#000000',
+          strokeWidth: 1
+        });
+        this.canvas.add(polygon);
+        this.canvas.renderAll();
+      })
     })
   }
-
   ngAfterViewInit() {
     this.canvas = new fabric.Canvas('drawingCancvas');
     
@@ -89,12 +98,13 @@ export class AppComponent implements AfterViewInit{
 
   private onMuseUp(e: fabric.IEvent<MouseEvent>){
     if(this.capturingAreaActive && e.pointer && this.capturingAreaStartPoint){
-      const endingPoint: Point = {
+      const endingPoint: SimplePoint = {
         x: e.pointer.x,
         y: e.pointer.y
       };
 
-      this._square.next(AppComponent.getSqueare(this.capturingAreaStartPoint, endingPoint));
+      this.$square.next(AppComponent.getSqueare(this.capturingAreaStartPoint, endingPoint));
+      
     }
   }
 
@@ -117,7 +127,7 @@ export class AppComponent implements AfterViewInit{
   }
 
 
-  private static getSqueare(point1: Point, point2: Point): Square {
+  private static getSqueare(point1: SimplePoint, point2: SimplePoint): SimpleSquare {
     let xTopLeft: number;
     let yTopLeft: number;
     let xBottomRight: number;
