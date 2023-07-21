@@ -82,10 +82,12 @@ export class PolygonDrawer {
     private onMouseUpHandler(e: fabric.IEvent<MouseEvent>){
         if(e.pointer){
             if(this.currentLine){
-                this.currentLine.x1 = e.pointer.x;
-                this.currentLine.y1 = e.pointer.y;
-                this.currentLine.x2 = e.pointer.x;
-                this.currentLine.y2 = e.pointer.y;
+                this.currentLine.set({
+                    'x1': e.pointer.x,
+                    'y1': e.pointer.y,
+                    'x2': e.pointer.x,
+                    'y2': e.pointer.y
+                });
             }else {
                 this.currentLine = this.createLine(e.pointer.x, e.pointer.y, e.pointer.x, e.pointer.y);
                 this.canvas.add(this.currentLine);
