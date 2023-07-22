@@ -87,11 +87,11 @@
     <div class="radio">
       <label>
         <input type="radio" name="workingMode" [value]="workingModeEnum.Sam" (change)="setWorkingMode(workingModeEnum.Sam)">
-        ⚡Zero-Shot(SAM)⚡
+        ⚡SAM⚡
       </label>
     </div>
     <div style="margin-left: 4M; display: inline-block">
-      <button *ngIf="($workingMode | async) === workingModeEnum.Polygon" (click)="completePolygon()">END</button>
+      <button *ngIf="($workingMode | async) === workingModeEnum.Polygon" (click)="completePolygon()">enter</button>
     </div>
   </div>
   <br/>

@@ -6,6 +6,7 @@ import { environment } from 'src/environment';
 import { SimpleSquare, SimplePoint } from './classes/Geometries';
 import { AnnotationsService } from './services/annotations.service';
 import { PolygonDrawer } from './classes/PolygonDrawer';
+import { Path } from 'fabric/fabric-impl';
 
 enum WorkingMode {
   None = 1,
@@ -70,10 +71,20 @@ export class AppComponent implements AfterViewInit{
 
     this.$workingMode.subscribe(wm => {
       if(this.polygonDrawer){
-        if(wm == WorkingMode.Polygon){
+        if(wm === WorkingMode.Polygon){
           this.polygonDrawer.Activate();
         } else{
           this.polygonDrawer.Deactivate();
+        }
+
+        if(wm === WorkingMode.Brush){
+          this.canvas.isDrawingMode = true;
+          this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
+          this.canvas.freeDrawingBrush.color = 'rgba(0,0,255,0.5)'; 
+          this.canvas.freeDrawingBrush.width = 30;
+          this.canvas.freeDrawingCursor ='url(assets/images/brush_cursor.jpg) 10 10, auto';
+        }else{
+          this.canvas.isDrawingMode = false;
         }
       }
     })
@@ -84,11 +95,13 @@ export class AppComponent implements AfterViewInit{
     this.polygonDrawer = new PolygonDrawer(this.canvas);
     
     fabric.Image.fromURL(`${environment.annotationsApiBaseUrl}/images/${this.imageId}`, (img) => {
-      this.canvas.setDimensions({width: img.width as number, height: img.height as number});
-      this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
 
-      this.canvas.on('mouse:down', this.onMouseDown.bind(this));
-      this.canvas.on("mouse:up", this.onMuseUp.bind(this));
+
+        this.canvas.setDimensions({width: img.width as number, height: img.height as number});
+        this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas));
+
+        this.canvas.on('mouse:down', this.onMouseDown.bind(this));
+        this.canvas.on("mouse:up", this.onMuseUp.bind(this));
     });  
   }
 
