@@ -87,7 +87,7 @@ export class AppComponent implements AfterViewInit{
           this.canvas.isDrawingMode = false;
         }
       }
-    })
+    });
   }
   
   ngAfterViewInit() {
@@ -102,7 +102,7 @@ export class AppComponent implements AfterViewInit{
 
         this.canvas.on('mouse:down', this.onMouseDown.bind(this));
         this.canvas.on("mouse:up", this.onMuseUp.bind(this));
-    });  
+    });
   }
 
   setWorkingMode(newMode: WorkingMode){
